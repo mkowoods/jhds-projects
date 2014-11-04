@@ -1,0 +1,131 @@
+---
+title: "Course Regr Project"
+output: html_document
+---
+
+###Exeutive Summary
+
+The purpose of this analysis is to determine if the type of transmission(automatic vs manual) effects fuel efficiency and to quantify that effect. In order to perform the analysis we'll use the mtcars data set, which contains data on 32 automobiles from 1973-74. The dataset has mpg, type of transmission as well as other variables like weight, horsepower and number of cylinders. In order to perform the analysis we'll begin by performing an exploratory data analysis and then create several regession models with the hopes of building a useful model for predicting mpg based on the transmission type and other relevant factors. The analysis performed indicates that the type of transmission does not have an effect on the mpg, relative to other factors like weight and horsepower.
+
+To begin we'll load the data and run some quick summary stats and plots
+
+```{r}
+data(mtcars);
+```
+
+The summary indicates that all of the data points are numeric - including our transmission variable - but the scatterplot matrix(see appendix) clearly shows that there are several categorical variables in the dataset. We correct for those below:
+
+```{r}
+mtcars$cyl <- factor(mtcars$cyl);mtcars$vs <- factor(mtcars$vs);
+mtcars$am <- factor(mtcars$am);mtcars$gear <- factor(mtcars$gear)
+mtcars$carb <- factor(mtcars$carb)
+```
+
+Additionally, the variables hp and disp seem to possess some non-linear relationship to mpg so we'll also include a transformation:
+```{r}
+mtcars$displ.sqrt <- sqrt(mtcars$disp);mtcars$hp.sqrt <- sqrt(mtcars$hp)
+```
+
+Based on these transformations we can now look at the dataset to see what variables appear to have correlations with the outcome variable:
+
+```{r}
+cor(mtcars[sapply(mtcars, is.numeric)])[1,]
+```
+
+And for the factor variables we observe several promising relationships(see appendix).
+
+
+Finally, to confirm that there's a difference between performance of cars with different transmission types we'll do a simple T-Test based on the two conditions:
+
+```{r}
+results <- t.test(mtcars$mpg~mtcars$am)
+results$p.value
+results$conf.int[1:2]
+```
+
+The results from the test indicates that we can reject the null hypothesis(that there is no difference in average mpg). Furthermore the results indicate that cars with a manual transmission have increased mpg.
+
+###Regression Analysis
+
+Based on the preliminary data analysis we have adequate reason to beleive that there's an effect from transmission type. We also have indications that there are several key variables worth exploring in developing a regression model to predict mpg. 
+
+For our first model we're going to use the following variables to predict mpg: disp, wt, hp, am, cyl, vs, carb, displ.sqrt and hp.sqrt
+
+```{r}
+m1 <- lm(mpg ~ disp + wt + hp + am + cyl + vs + carb + displ.sqrt + hp.sqrt, data = mtcars)
+```
+
+The second model we try removes several variables that didnt have a significant impact on the outcome(carb, cyl, vs), we also remove the sqrt transformations since they didnt significantly improve upon the non-transformed version of the variable. Also, we'll drop disp and keep the wt variable, because displacement and weight actually encode the same information.
+
+```{r}
+m2 <- lm(mpg ~ wt + hp + am, data = mtcars)
+```
+
+The final model that we'll look at includes an interaction between wt and am. It appears that mpg falls faster relative to weight for cars that have manual transmissions(see chart below in appendix).
+```{r}
+m3 <- lm(mpg ~ wt*am + hp, data = mtcars)
+```
+
+The third model has a slightly higher adjusted r-squared then model 2.
+
+###Interpreting the model
+
+From our 3 models we're really only interested in evaluating model2 and model3, because they perform comparably to model 1 and are much simpler.
+
+First we can review the diagnostic plots of the third model(see Appendix). 
+We observe there's a systematic error in the residuals that is apparent in the Q-Q Plot. Based on that and the fact that the models otherwise perform similarly I would reject m3 in favor of m2, which does not show a sytematic bias in the residuals(see appendix).
+
+Because of it's simplicity and based on the results of the diagnostics. I'm going to choose model 2(m2) is the best candidate model for estimating mpg.
+
+###Conclusion
+
+If we accept m2 as a viable model then we arrive at the conclusion that we cannot reject the null hypothesis at the 95% confidence level(5% cut-off of the p-value) that transmission type affects mpg relative to other factors like the weight of the vehicle and the type of engine(based on horse power). Furthermore the 95% Confidence interval for the regression coefficient(-0.61 to 4.8) for m2 passes through zero, which is an indicator that there may be no effect from transmission type. Based on the evidence I dont think we can come to the conclusion that transmission type has a significant impact on the performance of a vehicle.
+
+
+###Appendix
+Scatterplot Matrix
+```{r, echo=FALSE}
+pairs(mtcars)
+```
+
+Boxplot of Factor Variables:
+```{r, echo=FALSE}
+par(mfrow = c(2, 3))
+with(mtcars, boxplot(mpg~am, main = "Automatic(0) vs Manual(1)"))
+with(mtcars, boxplot(mpg~cyl, main = "Cylinders"))
+with(mtcars, boxplot(mpg~vs, main = "V- vs Standard engine"))
+with(mtcars, boxplot(mpg~gear, main = "Gears"))
+with(mtcars, boxplot(mpg~carb, main = "Carbureators"))
+par(mfrow = c(1, 1))
+```
+
+Interaction model:
+```{r, echo=FALSE}
+library(grid)
+library(ggplot2)
+library(scales)
+pushViewport(viewport(layout = grid.layout(1, 2)))
+#plot indicates an interaction is important for the model
+p1 <- qplot(wt, mpg, data = mtcars, color = am) + geom_smooth(aes(group=am), method="lm")
+p1 <- p1 + guides(colour = FALSE)
+p1 <- p1 +scale_y_continuous(limits = c(0, 40))
+
+#shows there's an average affect
+p2 <- qplot(hp, mpg, data = mtcars, color = am) + geom_smooth(aes(group=am), method="lm")
+p2 <- p2 +scale_y_continuous(limits = c(0, 40))
+                             
+print(p1, vp = viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(p2, vp = viewport(layout.pos.row = 1, layout.pos.col = 2))
+```
+
+Diagnotic for Model 3:
+```{r, echo= FALSE}
+par(mfrow = c(2,2))
+plot(m3)
+```
+
+Diagnostic for Model 2:
+```{r, echo= FALSE}
+par(mfrow = c(2,2))
+plot(m2)
+```

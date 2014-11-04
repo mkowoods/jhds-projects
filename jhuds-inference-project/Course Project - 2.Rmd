@@ -1,0 +1,64 @@
+---
+title: "Course Project Inference - 2"
+output: html_document
+---
+
+Question 1 - Load the Tooth Growth data and perform analysis
+
+To begin let's load in the data set and compute some basic stats:
+
+```{r}
+data(ToothGrowth); summary(ToothGrowth)
+```
+
+Given that there are only two numeric variables we can do a quick scatter plot
+```{r echo = FALSE}
+with(ToothGrowth, plot(dose, len))
+```
+
+It's clear that the dose variable is also a factor:
+```{r}
+ToothGrowth$dose <- factor(ToothGrowth$dose)
+```
+
+Given that 2 of the variables are categorical and only 1 is numeric let's plot the data with boxplot seperated by facets using the ggplot2 library.
+
+Here we can clearly see the distribution of the len variable based on each of the two factors
+```{r}
+library(ggplot2)
+p <- ggplot(ToothGrowth, aes(supp, len, fill = supp)) + geom_boxplot() + geom_point(color = "blue")
+p + facet_grid(. ~ dose)
+```
+
+Question 2- provide a basic summary of the data
+
+In order to do a basic summary we'll just look at some key stats relative to the categories of interest: dose and Supplemnt Type
+
+```{r}
+with(ToothGrowth, tapply(len, list(dose=dose, supp=supp), mean))
+with(ToothGrowth, tapply(len, list(dose=dose, supp=supp), sd))
+with(ToothGrowth, tapply(len, list(dose=dose, supp=supp), median))
+```
+
+Question 3 - Use confidence intervals and hypothesis tests to compare tooth growth by supp and dose.
+
+To begin we'll perform an unpaired T-Test comparing the OJ treatment and the VC treatment for each dose level. We'll also assume that the variances are different in the different groups(this seems to be fair assumption given the sd based on the samples for dose vs supp). The t.test function handles the calculations of the confidence interval as well as the hypothesis test.
+
+```{r}
+for (i in levels(ToothGrowth$dose)){
+  t_results <- t.test(len ~ supp, 
+                     data = subset(ToothGrowth, ToothGrowth$dose == i), 
+                     var.equal = FALSE,
+                     paired = FALSE
+                     )
+  print(paste("Dose level:", i))
+  print(t_results)
+  }
+```
+
+Question 4 - State your conclusions and the assumptions needed for your conclusions. 
+
+The results of the t-test indicate that for doses of 0.5 or 1 milligrams there is a meaningful difference in the average outcome and that it is likely that those who use the OJ supplement will see greater lengths than those who use Vitamin C. For the two cases where the doses are 0.5 and 1 mg we reject the null hypothesis, that the means are equal, because of the low p-value associated with that hypothesis. Furthermore, we concluded that OJ is likely to have a positive impact on tooth length, because the confidence intervals for the difference of the means are greater than zero in both cases. 
+
+For the 2 mg case there is insuffucuent cause to reject the null hypothesis that the means are equal. Additionally, the confidence interval passes through zero and the boxplot indicates that the two applications have nearly identical means and symmetric distributions. 
+
