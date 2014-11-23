@@ -70,6 +70,8 @@ preProcessTrain <- function(X){
 
 har.train.X.preproc <- preProcessTrain(har.train.X)
 
+
+
 cols <- names(har.train.X.preproc)
 har.train.X.preproc$outcome <- har.train.Y
 
@@ -92,3 +94,27 @@ modFit.rf <- train(y = har.train.X.preproc$outcome, x = har.train.X.preproc[, -5
                    trControl = trControl,
                    do.trace = 25,
                    tuneLength = 5)
+
+
+
+#Final Model
+modFit.rf <- randomForest(y = har.Y, x = har.X.preproc, ntree = 150, mtry = 27, do.trace = 25)
+
+har.test <- read.csv("pml-testing.csv", header = T)
+
+har.Y = har[, 160]
+har.X = har[, -160]
+har.X.preproc <- preProcessTrain(har.X)
+cols <- names(har.X.preproc)
+
+har.test.predict <- predict(modFit.rf, har.test[, cols])
+
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+
+pml_write_files(har.test.predict)
