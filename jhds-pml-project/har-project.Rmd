@@ -157,7 +157,7 @@ sum(har.test.Y == "A")/length(har.test.Y)
 
 
 ###Decision Tree
-The first predictive model I like to start with a basic decision tree, since it's robust to feature scaling.
+The first predictive model I like to start with a basic decision tree, since it's robust to feature scaling. Here we'll use the model mainly as a benchmark to gauge the quality of other models.
 
 Because of the size of the data we'll be using I also want to adjust the default training Controls.
 
@@ -168,7 +168,7 @@ modFit.dtree <- train(y = har.train.Y, x = har.train.X.preproc,
                       trControl = trControl)
 ```
 
-The out of Sample Error for this model is a significant improvement on the prior model, but can still be improved upon.
+The out of Sample Error for this model is a significant improvement on the baseline naive model, but can still be improved upon a great deal. Also, what we see below is that the model has a significant bias. For example it estimates heavily the class "A"(the most prevalent class) and doesnt provide any estimate for the class "D."
 
 ```{r}
 test.pred <-  predict(modFit.dtree, har.test.X[, cols])
@@ -178,7 +178,7 @@ table(test.pred, har.test.Y)
 
 ###Knn
 
-Another simple model that performs well for classification tasks is knn. However, because of the number of dimensions in the data set it's usually preferrable to reduce the dimenisionlity before applying the knn algorithm. To handle that we'll be using PCA.
+Another simple model that performs well for classification tasks is K Nearest Neighbors. However, because of the number of dimensions in the data set it's usually preferrable to reduce the dimenisionlity before applying the knn algorithm. To handle that we'll be using PCA in our preProcessing Step.
 
 
 ```{r}
@@ -186,20 +186,26 @@ modFit.knn <- train(y = har.train.Y, x = har.train.X.preproc,
                       method = "knn", 
                       preProcess = c("pca"),
                       trControl = trControl)
+modFit.knn
 ```
 
-Here we've seen still further improvement in the model, but there's one last approach worth trying, which is Random Forests.
+As we can see the modFit.knn model performs considerably better than the plain decision tree at the optimal tuning parameter of K = 5 
 
+When we compare it to the test set we also get a significant improvement over the simple decision tree with an out of sample accuracy of 92.4%
 ```{r}
 test.pred <-  predict(modFit.knn, har.test.X[, cols])
 sum(test.pred == har.test.Y)/length(har.test.Y)
 table(test.pred, har.test.Y)
 ```
 
+The out of Sample Error for this model is a significant improvement on the prior model, but can still be improved upon further by using a more robust technique like random forests.
+
+###Random Forest
+
+The next model we'll be trying is the Random Forest Model. The model has two main t
 
 
-
-modFit.rf <- train(y = har.train.X.preproc$outcome, x = har.train.X.preproc[, -53], 
+modFit.rf <- train(y = har.train.Y, x = har.train.X.preproc, 
                    method = "rf", 
                    ntree = 150,
                    #mtry = 27,

@@ -165,14 +165,14 @@ sum(har.test.Y == res)/length(har.test.Y)</code></pre>
 </div>
 <div id="decision-tree" class="section level3">
 <h3>Decision Tree</h3>
-<p>The first predictive model I like to start with a basic decision tree, since it’s robust to feature scaling.</p>
+<p>The first predictive model I like to start with a basic decision tree, since it’s robust to feature scaling. Here we’ll use the model mainly as a benchmark to gauge the quality of other models.</p>
 <p>Because of the size of the data we’ll be using I also want to adjust the default training Controls.</p>
 <pre class="r"><code>trControl = trainControl(&quot;cv&quot;, number = 4)
 modFit.dtree &lt;- train(y = har.train.Y, x = har.train.X.preproc, 
                       method = &quot;rpart&quot;, 
                       trControl = trControl)</code></pre>
 <pre><code>## Loading required package: rpart</code></pre>
-<p>The out of Sample Error for this model is a significant improvement on the prior model, but can still be improved upon.</p>
+<p>The out of Sample Error for this model is a significant improvement on the baseline naive model, but can still be improved upon a great deal. Also, what we see below is that the model has a significant bias. For example it estimates heavily the class “A”(the most prevalent class) and doesnt provide any estimate for the class “D.”</p>
 <pre class="r"><code>test.pred &lt;-  predict(modFit.dtree, har.test.X[, cols])
 sum(test.pred == har.test.Y)/length(har.test.Y)</code></pre>
 <pre><code>## [1] 0.493544</code></pre>
@@ -187,12 +187,34 @@ sum(test.pred == har.test.Y)/length(har.test.Y)</code></pre>
 </div>
 <div id="knn" class="section level3">
 <h3>Knn</h3>
-<p>Another simple model that performs well for classification tasks is knn. However, because of the number of dimensions in the data set it’s usually preferrable to reduce the dimenisionlity before applying the knn algorithm. To handle that we’ll be using PCA.</p>
+<p>Another simple model that performs well for classification tasks is K Nearest Neighbors. However, because of the number of dimensions in the data set it’s usually preferrable to reduce the dimenisionlity before applying the knn algorithm. To handle that we’ll be using PCA in our preProcessing Step.</p>
 <pre class="r"><code>modFit.knn &lt;- train(y = har.train.Y, x = har.train.X.preproc, 
                       method = &quot;knn&quot;, 
                       preProcess = c(&quot;pca&quot;),
-                      trControl = trControl)</code></pre>
-<p>Here we’ve seen still further improvement in the model, but there’s one last approach worth trying, which is Random Forests.</p>
+                      trControl = trControl)
+modFit.knn</code></pre>
+<pre><code>## k-Nearest Neighbors 
+## 
+## 7850 samples
+##   52 predictor
+##    5 classes: 'A', 'B', 'C', 'D', 'E' 
+## 
+## Pre-processing: principal component signal extraction, scaled, centered 
+## Resampling: Cross-Validated (4 fold) 
+## 
+## Summary of sample sizes: 5888, 5887, 5887, 5888 
+## 
+## Resampling results across tuning parameters:
+## 
+##   k  Accuracy   Kappa      Accuracy SD  Kappa SD   
+##   5  0.8915931  0.8627739  0.006284607  0.007918730
+##   7  0.8750319  0.8418285  0.004563745  0.005785431
+##   9  0.8542681  0.8155949  0.005909525  0.007468248
+## 
+## Accuracy was used to select the optimal model using  the largest value.
+## The final value used for the model was k = 5.</code></pre>
+<p>As we can see the modFit.knn model performs considerably better than the plain decision tree at the optimal tuning parameter of K = 5</p>
+<p>When we compare it to the test set we also get strong results that the out of sample accuracy of 92.4%</p>
 <pre class="r"><code>test.pred &lt;-  predict(modFit.knn, har.test.X[, cols])
 sum(test.pred == har.test.Y)/length(har.test.Y)</code></pre>
 <pre><code>## [1] 0.9231227</code></pre>
@@ -204,7 +226,12 @@ sum(test.pred == har.test.Y)/length(har.test.Y)</code></pre>
 ##         C   62  114 1929  144   43
 ##         D   36   27   25 1743   50
 ##         E    1   12   12   15 1990</code></pre>
-<p>modFit.rf &lt;- train(y = har.train.X.preproc$outcome, x = har.train.X.preproc[, -53], method = “rf”, ntree = 150, #mtry = 27, trControl = trControl, do.trace = 25, tuneLength = 5)</p>
+<p>The out of Sample Error for this model is a significant improvement on the prior model, but can still be improved upon further by using a more robust echnique</p>
+</div>
+<div id="random-forest" class="section level3">
+<h3>Random Forest</h3>
+<p>The next model we’ll be trying is the Random Forest Model. The model has two main t</p>
+<p>modFit.rf &lt;- train(y = har.train.Y, x = har.train.X.preproc, method = “rf”, ntree = 150, #mtry = 27, trControl = trControl, do.trace = 25, tuneLength = 5)</p>
 </div>
 </div>
 
