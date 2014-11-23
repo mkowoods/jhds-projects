@@ -1,0 +1,208 @@
+---
+title: "Human Activity Recognition pml-project"
+author: "mwoods"
+date: "November 22, 2014"
+output: html_document
+---
+
+The development of the model was pretty straight forward. The primary challenge with this data set was identifying the meaningful subset of features from the raw data. In order to manage this there are several steps designed to filter out columns that arent particularly useful:
+
+##1. Load Libraries and Data
+
+First we load the two libraries we'll be using and set the seed. Finally we load the training data csv.
+
+```{r, message=F, warning=F}
+library(caret); library(ggplot2)
+set.seed(42)
+har <- read.csv("pml-training.csv", header = T)
+```
+
+
+Next we split the data into a test and train set using a 70/30 Split
+
+```{r}
+trainIdx <- createDataPartition(har$classe, p = 0.4, list = F)
+
+har.train <- har[trainIdx, ]
+har.test <- har[-trainIdx, ]
+remove(har)
+
+har.train.X <- har.train[, -160]
+har.train.Y <- har.train[, 160]
+har.test.X <- har.test[, -160]
+har.test.Y <- har.test[, 160]
+
+remove(har.train, har.test)
+```
+
+##2. Data Cleaning
+
+In order to handle the data cleaning I defined a few convenience functions
+
+The first simply handles the task of converting factor variables to numeric. Because there are strings in some of the numeric columns this is necessary to recast the data to the appropriate format.
+
+```{r}
+as.numeric.factor <- function(x) {as.numeric(levels(x))[x]}
+```
+
+The next function is designed to apply the as.numeric.factor function over a give data frame converting all factor columns into numeric.
+
+```{r}
+convertFactorToNumeric <- function(df){
+  cols <- dim(df)[2]
+  for(i in 1:cols){
+    if(is.factor(df[, i])){
+      df[, i] <- as.numeric.factor(df[, i])
+    }
+  }
+  return(df)
+}
+```
+
+The following function is designed to identify any cols in a dataframe where the number of NA's or incomplete values is greater than some threshold, in this case i used 50%.
+
+```{r}
+colsWithLargeNumberNA <- function(df, NA.Threshold = 0.5){
+  cols <- dim(df)[2]
+  rows <- dim(df)[1]
+  colsPastThreshold <- numeric()
+  for(i in 1:cols){
+    proportionMissing <- sum(is.na(df[, i]))/rows
+    if(proportionMissing >= NA.Threshold){
+      colsPastThreshold <- c(colsPastThreshold, i)
+    }
+  }
+  return(colsPastThreshold)
+}
+```
+
+The final function that we define is the pre-processing sequence for the training data.
+
+Here we're going through a couple of steps:
+1.  Remove a set of predetermined columns that deal more with how the data was captured and aren't useful/generalizable predictors such as the timestamp, user name, row number, etc.
+
+2.  Since the remaining columns should all be numeric variables we run the converFactorToNumeric function on the data frame to convert columns where necessary.
+
+3.  Most of the columns that were loaded originally as factors actually contain a lot of incomplete cases and should be removed from the analysis. Here we use colsWithLargeNumberNA to scan the dataframe and identify any such variables so that they can be removed from the analysis.
+
+4. Finally, we run a near zero variance test to identify and remove any columns that have insufficient variability(in this particular implementation this is redundant, but is still a useful step)
+
+```{r}
+preProcessTrain <- function(X){
+  #remove non-numeric and other miscellaneous data points
+  colsToRemove <- c("X", "user_name", "raw_timestamp_part_1", "raw_timestamp_part_2", 
+                    "cvtd_timestamp", "new_window", "num_window")
+  colRemoveBool <- names(X) %in% colsToRemove
+  X <- X[, !colRemoveBool]
+  
+  X <- convertFactorToNumeric(X)
+
+  col.high.perc.NA <- colsWithLargeNumberNA(X)
+  
+  if(length(col.high.perc.NA) > 0){
+    X <- X[, -col.high.perc.NA]
+  }
+  
+  X.nzv <- nearZeroVar(X)
+  
+  if(length(X.nzv) > 0){
+    X <- X[, -X.nzv]
+  }
+  return(X)
+}
+```
+
+
+Now In Order to Process the Training Data we simply run the following Command
+
+```{r, message= F, warning=FALSE}
+har.train.X.preproc <- preProcessTrain(har.train.X)
+dim(har.train.X.preproc)
+```
+
+We'll also use the column names from the preprocessed data to filter the test set in the future
+```{r}
+cols <- names(har.train.X.preproc)
+```
+
+##3. Modelling
+
+Before we begin modelling let's define some benchmarks.
+
+For model evaluation we'll measure accuracy based on the simple metric: 
+  (# of correct predictions)/(total number of cases)
+
+
+###Baselining
+To determine our baseline accuracay there are 5 variables if we just randomly guess we would expect to have an overall accuracy rate of around 20%
+
+```{r}
+choices <- c("A", "B", "C", "D", "E")
+res <- rep(NA, length(har.test.Y))
+for(i in 1:length(har.test.Y)){res[i] <- sample(choices, 1)}
+sum(har.test.Y == res)/length(har.test.Y)
+```
+
+Using another naive test we could just guess the most frequent case. In the training data set this is "A"
+
+```{r}
+barplot(table(har.train.Y))
+```
+
+So a model guessing only "A" provides results slightly better than random guessing
+
+```{r}
+sum(har.test.Y == "A")/length(har.test.Y)
+```
+
+
+###Decision Tree
+The first predictive model I like to start with a basic decision tree, since it's robust to feature scaling.
+
+Because of the size of the data we'll be using I also want to adjust the default training Controls.
+
+```{r}
+trControl = trainControl("cv", number = 4)
+modFit.dtree <- train(y = har.train.Y, x = har.train.X.preproc, 
+                      method = "rpart", 
+                      trControl = trControl)
+```
+
+The out of Sample Error for this model is a significant improvement on the prior model, but can still be improved upon.
+
+```{r}
+test.pred <-  predict(modFit.dtree, har.test.X[, cols])
+sum(test.pred == har.test.Y)/length(har.test.Y)
+table(test.pred, har.test.Y)
+```
+
+###Knn
+
+Another simple model that performs well for classification tasks is knn. However, because of the number of dimensions in the data set it's usually preferrable to reduce the dimenisionlity before applying the knn algorithm. To handle that we'll be using PCA.
+
+
+```{r}
+modFit.knn <- train(y = har.train.Y, x = har.train.X.preproc, 
+                      method = "knn", 
+                      preProcess = c("pca"),
+                      trControl = trControl)
+```
+
+Here we've seen still further improvement in the model, but there's one last approach worth trying, which is Random Forests.
+
+```{r}
+test.pred <-  predict(modFit.knn, har.test.X[, cols])
+sum(test.pred == har.test.Y)/length(har.test.Y)
+table(test.pred, har.test.Y)
+```
+
+
+
+
+modFit.rf <- train(y = har.train.X.preproc$outcome, x = har.train.X.preproc[, -53], 
+                   method = "rf", 
+                   ntree = 150,
+                   #mtry = 27,
+                   trControl = trControl,
+                   do.trace = 25,
+                   tuneLength = 5)
