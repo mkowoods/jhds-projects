@@ -19,7 +19,7 @@ har <- read.csv("pml-training.csv", header = T)
 ```
 
 
-Next we split the data into a test and train set using a 70/30 Split
+Next we split the data into a test and train set using a 60/40 Split
 
 
 ```r
@@ -63,7 +63,7 @@ convertFactorToNumeric <- function(df){
 }
 ```
 
-The following function is designed to identify any cols in a dataframe where the number of NA's or incomplete values is greater than some threshold, in this case i used 50%.
+We also defined a function to identify any cols in a dataframe where the percent of NA's or incomplete values is greater than some threshold, in this case I used 50%.
 
 
 ```r
@@ -84,6 +84,7 @@ colsWithLargeNumberNA <- function(df, NA.Threshold = 0.5){
 The final function that we define is the pre-processing sequence for the training data.
 
 Here we're going through a couple of steps:
+
 1.  Remove a set of predetermined columns that deal more with how the data was captured and aren't useful/generalizable predictors such as the timestamp, user name, row number, etc.
 
 2.  Since the remaining columns should all be numeric variables we run the converFactorToNumeric function on the data frame to convert columns where necessary.
@@ -119,7 +120,7 @@ preProcessTrain <- function(X){
 ```
 
 
-Now In Order to Process the Training Data we simply run the following Command
+Now in order to process the Training Data we simply run the following command:
 
 
 ```r
@@ -131,7 +132,7 @@ dim(har.train.X.preproc)
 ## [1] 7850   52
 ```
 
-We'll also use the column names from the preprocessed data to filter the test set in the future
+We'll also use the column names from the preprocessed data to filter the test set in the future so we'll store them in the variable cols.
 
 ```r
 cols <- names(har.train.X.preproc)
@@ -146,7 +147,8 @@ For model evaluation we'll measure accuracy based on the simple metric:
 
 
 ###Baselining
-To determine our baseline accuracay there are 5 variables if we just randomly guess we would expect to have an overall accuracy rate of around 20%
+
+To determine our baseline accuracy we'll apply two naive approaches. Firstly, there are 5 variables if we just randomly guess we would expect to have an overall accuracy rate of around 20%.
 
 
 ```r
@@ -160,7 +162,7 @@ sum(har.test.Y == res)/length(har.test.Y)
 ## [1] 0.2009004
 ```
 
-Using another naive test we could just guess the most frequent case. In the training data set this is "A"
+Secondly, another common naive test is to just guess the most frequent case in the training data set this.
 
 
 ```r
@@ -169,7 +171,7 @@ barplot(table(har.train.Y))
 
 ![plot of chunk unnamed-chunk-10](figure/unnamed-chunk-10-1.png) 
 
-So a model guessing only "A" provides results slightly better than random guessing
+So a model guessing only "A" provides results slightly better than random guessing.
 
 
 ```r
@@ -182,9 +184,10 @@ sum(har.test.Y == "A")/length(har.test.Y)
 
 
 ###Decision Tree
-The first predictive model I like to start with a basic decision tree, since it's robust to feature scaling. Here we'll use the model mainly as a benchmark to gauge the quality of other models.
 
-Because of the size of the data we'll be using I also want to adjust the default training Controls.
+The first predictive model I like to start with is a basic decision tree, since it's robust to feature scaling. Here we'll use the model mainly as a benchmark to gauge the quality of other models.
+
+Because of the size of the data set I also want to adjust the default training controls to 4-fold Cross Validation.
 
 
 ```r
@@ -194,7 +197,7 @@ modFit.dtree <- train(y = har.train.Y, x = har.train.X.preproc,
                       trControl = trControl)
 ```
 
-The out of Sample Error for this model is a significant improvement on the baseline naive model, but can still be improved upon a great deal. Also, what we see below is that the model has a significant bias. For example it estimates heavily the class "A"(the most prevalent class) and doesnt provide any estimate for the class "D."
+The out of Sample Error for this model is a significant improvement on the baseline naive model, but can still be improved upon a great deal. Also, what we see below is that the model has a significant bias. For example it estimates heavily the class "A"(the most prevalent class) and doesn't provide any estimate for the class "D" (the least prevalent class).
 
 
 ```r
@@ -220,7 +223,7 @@ table(test.pred, har.test.Y)
 ##         E    7    0    0    0  975
 ```
 
-###Knn
+###KNN
 
 Another simple model that performs well for classification tasks is K Nearest Neighbors. However, because of the number of dimensions in the data set it's usually preferrable to reduce the dimenisionlity before applying the knn algorithm. To handle that we'll be using PCA in our preProcessing Step.
 
@@ -288,7 +291,7 @@ The out of Sample Error for this model is a significant improvement on the prior
 
 ###Random Forest
 
-The next model we'll be trying is the Random Forest Model. The model has two main tuning parameters the first is the # of trees and the second is the number of variables used at the creation of each branch (mtry). The default value for ntree is 500, but that's a bit overkill in our case we can determine a better cut-off for ntree by running the random Forest with its default parameters and seeing where we see the error rate flatten out (sometime called the elbow of the diagnostic plot).
+The next model we'll be trying is the Random Forest Model. The model has two main tuning parameters the first is the number of trees and the second is the number of variables used at the creation of each branch (mtry). The default value for ntree is 500, but that's a bit overkill in our case we can determine a better cut-off for ntree by running the random Forest with its default parameters and seeing where we see the error rate flatten out (sometime called the elbow of the diagnostic plot).
 
 
 ```r
@@ -361,4 +364,4 @@ table(test.pred, har.test.Y)
 ##         E    0    0    0    1 2148
 ```
 
-Based on the results it's clear that a Random Forest with little other tuning performs exceptionally well on the problem.
+Based on the results it's clear that a Random Forest with little other tuning performs exceptionally well on the problem. The out of sample accuracy approaches 99%.
