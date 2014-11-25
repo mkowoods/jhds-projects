@@ -1,0 +1,115 @@
+---
+title: "NOAA-Data-Analysis"
+author: "mwoods"
+date: "November 24, 2014"
+output: html_document
+---
+
+The purpose of this analysis is to do some basic data exploration of the NOAA Storm Data database. During the course of the analysis we'll load the data in from the original csv, plot some results regarding the damage(both to people and property) associated with different types of events. There are two questions we want to address in this analysis, which events are the most harmful to people and which event have the greatest economic consequences.
+
+
+
+##Data Processing
+
+In order to load the data we use read.csv to load the csv into the data frame weather.data.
+```{r cache= T}
+library(ggplot2)
+weather.data <- read.csv("repdata-data-StormData.csv", header = T)
+```
+
+In order to perform the first analysis we'll build a dataframe that summarizes the personal harm data by EVTYPE.
+
+```{r}
+ev.count <- table(weather.data$EVTYPE)
+fatalaties.by.event <- tapply(X = weather.data$FATALITIES, INDEX = weather.data$EVTYPE,sum)
+injuries.by.event <- tapply(X = weather.data$INJURIES , INDEX = weather.data$EVTYPE,sum)
+
+pop.harm.df <- data.frame(ev.count = ev.count, 
+                          fatalaties.by.event = fatalaties.by.event, 
+                          injuries.by.event = injuries.by.event)
+```
+
+In order to perform the second analysis we'll create a dataframe call econ.harm.df. The dataframe will contain a summary of the economic impact of various natural events in dollar value. A data processing step we'll haeve to undertake is to convert values in PROPDMG and CROPDMG based on the units indicated in PROPDMGEXP and CROPDMGEXP.
+
+```{r}
+
+PROPDMGEXP.Numeric <- rep(1, dim(weather.data)[1])
+PROPDMGEXP.Numeric[weather.data$PROPDMGEXP == "M" | weather.data$PROPDMGEXP == "m" ] = 10^6
+PROPDMGEXP.Numeric[weather.data$PROPDMGEXP == "K"] = 10^3
+PROPDMGEXP.Numeric[weather.data$PROPDMGEXP == "H" | weather.data$PROPDMGEXP == "h" ] = 100
+PROPDMGEXP.Numeric[weather.data$PROPDMGEXP == "B"] = 10^9
+PROPDMGEXP.Numeric[weather.data$PROPDMGEXP == "1"] = 10
+PROPDMGEXP.Numeric[weather.data$PROPDMGEXP == "2"] = 100
+PROPDMGEXP.Numeric[weather.data$PROPDMGEXP == "3"] = 1000
+PROPDMGEXP.Numeric[weather.data$PROPDMGEXP == "4"] = 10000
+PROPDMGEXP.Numeric[weather.data$PROPDMGEXP == "5"] = 10^5
+PROPDMGEXP.Numeric[weather.data$PROPDMGEXP == "6"] = 10^6
+PROPDMGEXP.Numeric[weather.data$PROPDMGEXP == "7"] = 10^7
+PROPDMGEXP.Numeric[weather.data$PROPDMGEXP == "8"] = 10^8
+
+CROPDMGEXP.Numeric <- rep(1, dim(weather.data)[1])
+CROPDMGEXP.Numeric[weather.data$CROPDMGEXP == "M" | weather.data$CROPDMGEXP == "m" ] = 10^6
+CROPDMGEXP.Numeric[weather.data$CROPDMGEXP == "K" | weather.data$CROPDMGEXP == "k"] = 10^3
+CROPDMGEXP.Numeric[weather.data$CROPDMGEXP == "B"] = 10^9
+CROPDMGEXP.Numeric[weather.data$CROPDMGEXP == "2"] = 100
+
+ev.count <- table(weather.data$EVTYPE)
+PROPDMG.by.event <- tapply(X = weather.data$PROPDMG*PROPDMGEXP.Numeric, 
+                           INDEX = weather.data$EVTYPE, 
+                           FUN = sum)
+
+CROPDMG.by.event <- tapply(X = weather.data$CROPDMG*CROPDMGEXP.Numeric, 
+                           INDEX = weather.data$EVTYPE, 
+                           FUN = sum)
+econ.harm.df <- data.frame(ev.count = ev.count, 
+                          PROPDMG.by.event = PROPDMG.by.event, 
+                          CROPDMG.by.event = CROPDMG.by.event)
+
+```
+
+##Results
+
+First we're going to create a new column total.harm, which is the sum of fatalaties and injures by EVTYPE
+
+```{r}
+total.harm <- pop.harm.df$fatalaties.by.event + pop.harm.df$injuries.by.event
+pop.harm.df$total.harm <- total.harm
+```
+
+
+Next We'll order the results in descending order of total harm to identify which EVTYPES generate the greatest harm to the population
+```{r}
+rev.idx.total.harm <- order(-total.harm)
+head(pop.harm.df[rev.idx.total.harm,], n = 10)
+```
+
+
+After ordering the results we can now quickly plot the top 20 events based on the amount of harm caused to the population.
+
+The below chart shows that Tornadoes are by far the most significant cause of fatalities/injuries in the dataset.
+```{r, cache=TRUE}
+pop.harm.df.top20 <- pop.harm.df[rev.idx.total.harm[1:20],]
+pop.harm.df.top20$ev.count.Var1 <- with(pop.harm.df.top20, factor(ev.count.Var1, levels = ev.count.Var1[order(total.harm)]))
+g <- ggplot(pop.harm.df.top20, aes(x = ev.count.Var1, y = total.harm, fill = total.harm)) 
+g <- g + geom_bar(stat = "identity") + coord_flip() + ggtitle("Top 20 Most Harmful Events")
+g + scale_y_continuous("Total ppl Harmed") + scale_x_discrete("")
+
+```
+
+For the Second Analysis we'll go through a similar set of steps first defining a total column then filtering for the top 20 Events and plotting the results.
+
+```{r}
+total.DMG <- econ.harm.df$PROPDMG.by.event + econ.harm.df$CROPDMG.by.event
+econ.harm.df$total.DMG <- total.DMG
+rev.idx.total.DMG <- order(-total.DMG)
+
+econ.harm.df.top20 <- econ.harm.df[rev.idx.total.DMG[1:20],]
+econ.harm.df.top20$ev.count.Var1 <- with(econ.harm.df.top20, factor(ev.count.Var1, levels = ev.count.Var1[order(total.DMG)]))
+g <- ggplot(econ.harm.df.top20, aes(x = ev.count.Var1, y = total.DMG, fill = total.DMG)) 
+g <- g + geom_bar(stat = "identity") + coord_flip() + ggtitle("Top 20 Harmful Costly Events")
+g + scale_y_continuous("Total Cost") + scale_x_discrete("")
+```
+
+The results of this analysis indicate that water related events(Flooding, Hurricanes, Storm Surge, Flash Flood, etc.) are generally the most costly events although they are not necessarily the most dangerous to people. 
+
+A simple hypothesis is that the reason that Tornadoes cause such an extreme loss of life is that they're generally unexpected(not easily forecasted). On the other hand, Floods and Hurricanes are usually forecasted well in advance, so people can avoid direct contact, but they have a significant impact on infrastructure.
