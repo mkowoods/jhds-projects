@@ -14,6 +14,7 @@ depth.center <- attr(quakes.scale, "scaled:center")["depth"]
 
 shinyServer(
   function(input, output) {
+    
     output$plotDepth <- renderPlot({
       clustered.data <- kmeans(quakes.scale, input$clusters)
       centers <- as.data.frame(clustered.data$centers)
@@ -29,5 +30,14 @@ shinyServer(
       g <- g + scale_size("Mean\nMagnitude", limits = c(3.5, 6)) 
       g + scale_color_gradient("Depth", high = "#132B43", low = "#56B1F7", limits = c(20, 720))
     })
+    output$var.prediction <- renderPrint({
+      clustered.data <- kmeans(quakes.scale, input$clusters)
+      centers <- as.data.frame(clustered.data$centers)
+      centers$lat <- centers$lat * lat.scale + lat.center
+      centers$long <- centers$long * long.scale + long.center
+      centers$depth <- centers$depth * depth.scale + depth.center
+      centers$mean.mag <- tapply(X = quakes$mag, INDEX = clustered.data$cluster, mean)
+      var(centers$mean.mag)
+      })
   }
 )

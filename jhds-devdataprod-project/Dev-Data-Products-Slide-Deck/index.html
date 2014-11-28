@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Determining Interesting Geospatial Clusters Using K-Means</title>
+  <meta charset="utf-8">
+  <meta name="description" content="Determining Interesting Geospatial Clusters Using K-Means">
+  <meta name="author" content="M. Woods">
+  <meta name="generator" content="slidify" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta http-equiv="X-UA-Compatible" content="chrome=1">
+  <link rel="stylesheet" href="libraries/frameworks/io2012/css/default.css" media="all" >
+  <link rel="stylesheet" href="libraries/frameworks/io2012/css/phone.css" 
+    media="only screen and (max-device-width: 480px)" >
+  <link rel="stylesheet" href="libraries/frameworks/io2012/css/slidify.css" >
+  <link rel="stylesheet" href="libraries/highlighters/highlight.js/css/tomorrow.css" />
+  <base target="_blank"> <!-- This amazingness opens all links in a new tab. -->  <link rel=stylesheet href="./assets/css/ribbons.css"></link>
+
+  
+  <!-- Grab CDN jQuery, fall back to local if offline -->
+  <script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.7.min.js"></script>
+  <script>window.jQuery || document.write('<script src="libraries/widgets/quiz/js/jquery.js"><\/script>')</script> 
+  <script data-main="libraries/frameworks/io2012/js/slides" 
+    src="libraries/frameworks/io2012/js/require-1.0.8.min.js">
+  </script>
+  
+  
+
+</head>
+<body style="opacity: 0">
+  <slides class="layout-widescreen">
+    
+    <!-- LOGO SLIDE -->
+        <slide class="title-slide segue nobackground">
+  <hgroup class="auto-fadein">
+    <h1>Determining Interesting Geospatial Clusters Using K-Means</h1>
+    <h2>A Project for the Data Science Specialization that looks at ways of Compressing Redundant Data Points using K-Means Algorithm</h2>
+    <p>M. Woods<br/></p>
+  </hgroup>
+  <article></article>  
+</slide>
+    
+
+    <!-- SLIDES -->
+    <slide class="" id="slide-1" style="background:;">
+  <hgroup>
+    <h2>DataSet</h2>
+  </hgroup>
+  <article data-timings="">
+    <p>The dataset used in this post is the &quot;quakes&quot; data set from R. </p>
+
+<p>The Dataset contains a thousand observations of seismic activity in and around the Fiji Islands. </p>
+
+<p>The Variables in the Data set included the Latitude, Longitude, Depth and Magnitude of each event along with the number of stations that registered the event.</p>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-2" style="background:;">
+  <hgroup>
+    <h2>Examining the Data</h2>
+  </hgroup>
+  <article data-timings="">
+    <p>In order to visualize the data we used the ggplot2 library and indicated depth by reversing  the default color scale. Here you can see that the darker blue event represent lower depths and the size of the circles indicate the magnitude of the event. You can already to see areas that have higher activity and areas that seem to contain more extreme events.</p>
+
+<pre><code class="r">library(ggplot2); data(quakes)
+ggplot(quakes, aes(long, lat), na.rm = TRUE) + 
+  geom_point(color = &quot;black&quot;) +
+  geom_point(aes(size = mag, color = depth), alpha = 1/2) + 
+  scale_color_gradient(&quot;Depth&quot;, high = &quot;#132B43&quot;, low = &quot;#56B1F7&quot;)
+</code></pre>
+
+<p><img src="assets/fig/unnamed-chunk-1-1.png" alt="plot of chunk unnamed-chunk-1"> </p>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-3" style="background:;">
+  <hgroup>
+    <h2>Distribution of Magnitudes</h2>
+  </hgroup>
+  <article data-timings="">
+    <p>Another interesting feature of the dataset is that the magnitudes are exponentially scaled so the distribution of activity is skewed toward lower magnitude events. This is reflected in the clustering as we see the Mean Magnitude for each cluster converge</p>
+
+<p>Below is a chart showing the distribution of events by magnitude:</p>
+
+<pre><code class="r">hist(quakes$mag)
+</code></pre>
+
+<p><img src="assets/fig/unnamed-chunk-2-1.png" alt="plot of chunk unnamed-chunk-2"> </p>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-4" style="background:;">
+  <hgroup>
+    <h2>Why this is Useful(The Pitch!)</h2>
+  </hgroup>
+  <article data-timings="">
+    <p>An app like this is useful because it lets the end user gain some intutition around a very basic form of data compression. As the user moves the slider back and forth along the axis they&#39;ll see not only how the image changes (or doesnt), but also how the inter-cluster variance changes. </p>
+
+<p>Although this is a relatively small data set we it&#39;s highly clustered in some areas and so is a good candidate for k-means to be used to reduce the number of samples without meaningfully changing the distribution of the underlying data.</p>
+
+<p>Also, in a very Tufte way the graph shows a useful way to visualize higher dimensions of data (dims &gt; 3), using aesthetics like color and size.</p>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-5" style="background:;">
+  <hgroup>
+    <h2>Future Development</h2>
+  </hgroup>
+  <article data-timings="">
+    <p>Additionaly Development might by to add other visuals into the app or some sort of prediction aspect. Also, i&#39;m very interested in exploring the data in 3 dimenisions. I think that would provide an even more engaging way to interact with the k-means clustering algorithm. Either that or some form of animation...</p>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+    <slide class="backdrop"></slide>
+  </slides>
+  <div class="pagination pagination-small" id='io2012-ptoc' style="display:none;">
+    <ul>
+      <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=1 title='DataSet'>
+         1
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=2 title='Examining the Data'>
+         2
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=3 title='Distribution of Magnitudes'>
+         3
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=4 title='Why this is Useful(The Pitch!)'>
+         4
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=5 title='Future Development'>
+         5
+      </a>
+    </li>
+  </ul>
+  </div>  <!--[if IE]>
+    <script 
+      src="http://ajax.googleapis.com/ajax/libs/chrome-frame/1/CFInstall.min.js">  
+    </script>
+    <script>CFInstall.check({mode: 'overlay'});</script>
+  <![endif]-->
+</body>
+  <!-- Load Javascripts for Widgets -->
+  
+  <!-- LOAD HIGHLIGHTER JS FILES -->
+  <script src="libraries/highlighters/highlight.js/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+  <!-- DONE LOADING HIGHLIGHTER JS FILES -->
+   
+  </html>

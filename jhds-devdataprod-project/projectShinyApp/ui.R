@@ -4,8 +4,11 @@ shinyUI(
     # Application title
     headerPanel("Review Cluster of Quakes Data"),
     sidebarPanel(
-      sliderInput(inputId = 'clusters', label = 'Choose the Number fo Clusters', min = 25, max = 925, value = 925, step = 100)
-    ),
+      tags$h5("Choose the Number fo Clusters"),
+      sliderInput(inputId = 'clusters', label="", min = 25, max = 925, value = 525, step = 100),
+      tags$h5("Variance in Mean Magnitude"),
+      verbatimTextOutput("var.prediction")
+      ),
     mainPanel(
       plotOutput(outputId = 'plotDepth'),
       tags$h3("Description"),
